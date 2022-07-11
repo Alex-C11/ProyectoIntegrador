@@ -2,53 +2,62 @@
 
 namespace App\Http\Livewire;
 
-use App\Models\Association;
+use App\Models\Association as ModelsCategory;
 use Livewire\Component;
 
 class CrudAssociation extends Component
 {
-    public $association,$search;
     public $isOpen=false;
-    protected $listeners=['render','delete'=>'delete'];
-
-    protected $rules=[
-        'association.name'=>'required',
-        'association.creationDate'=>'required',
-        'association.location'=>'required',
-    ];
+    public $category_id,$name,$creationDate,$location;
 
     public function render(){
-        //$teams=Team::orderBy('id','desc')->paginate();
-        $association=Association::where('name','like','%'.$this->search.'%')
-                    ->orderBy('id','desc')->paginate(10);
-        return view('livewire.crud-association',compact('association'));
+        $categories=ModelsCategory::all();
+        return view('livewire.crud-association',compact('categories'));
     }
-
-
     public function create(){
-        $this->isOpen=true;
-        $this->reset(['association']);
+        $this->openModal();
     }
-
+    public function openModal(){
+        $this->isOpen=true;
+    }
+    public function closeModal(){
+        $this->isOpen=false;
+    }
+    private function resetInputsFields(){
+        $this->name="";
+        $this->creationDate="";
+        $this->location="";
+    }
     public function store(){
-        $this->validate();
-        if(!isset($this->association->id)){
-            Association::create($this->association);
-        }else{
-            $this->association->save();
-        }
-        $this->reset(['isOpen','association']);
-        $this->emitTo('CrudAssociation','render');
-        $this->emit('alert','Registro creado satisfactoriamente');
+        $this->validate([
+            'name'=>'required',
+            'creationDate'=>'required',
+            'location'=>'required'
+        ]);
+        ModelsCategory::updateOrCreate(['id'=>$this->category_id],
+            [
+                'name'=>$this->name,
+                'creationDate'=>$this->creationDate,
+                'location'=>$this->location
+            ]
+        );
+        session()->flash('message',
+            $this->category_id?'Registro actualizado satisfactoriamente':'Registro creado satisfactoriamente.');
+        $this->closeModal();
+        $this->resetInputsFields();
     }
 
-    public function edit(Association $association){
-        $this->association=$association;
-        $this->isOpen=true;
+    public function edit(ModelsCategory $category){
+        $this->category_id=$category->id;
+        $this->name=$category->name;
+        $this->creationDate=$category->creationDate;
+        $this->location=$category->location;
+        $this->openModal();
     }
 
-    public function delete(Association $association){
-        $association->delete();
+    public function delete(ModelsCategory $category){
+        $category->delete();
+        session()->flash('message', 'Registro borrado satisfactoriamente.');
     }
 }
 
